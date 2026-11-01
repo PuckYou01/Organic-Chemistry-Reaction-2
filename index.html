@@ -572,7 +572,10 @@ small{font-size:12px}
    อ้างอิง: IPST เคมี เล่ม 5 บทที่ 12 หัวข้อ 12.6-12.7
    ============================================================ */
 
-var APP_VERSION = '1.5.0';
+var APP_VERSION = '1.6.0';
+/* WP-06d: ภารกิจประเมินผล (คลังข้อสอบ) ปิดไว้ระหว่างทดลองใช้เพื่อไม่ให้ข้อสอบรั่ว
+   ไฟล์ที่เปิดได้สร้างด้วย _plan/tests/make-test-copies.sh (สำเนาอยู่ที่ with-test/) — อย่าแก้ค่านี้ด้วยมือ */
+var TEST_MODE_ENABLED = false;
 
 /* ---------- กรดคาร์บอกซิลิก ---------- */
 var ACIDS = [
@@ -1114,7 +1117,7 @@ function svgSoap(fat, o){ return molSVG(molSoap(fat), o); }
    ============================================================ */
 
 /* ====== ตั้งค่าให้ครูแก้ 2 บรรทัดนี้ ====== */
-var SHEET_URL   = 'https://script.google.com/macros/s/AKfycby-bYCKvzAnloNapV-d0L-7UlTKwaNR4Qjim-6Pz-cZepv0RDKoOlL1j8aMmI-qJKnY/exec';          /* วาง Web app URL (.../exec) ที่ได้จาก Apps Script */
+var SHEET_URL   = '';          /* วาง Web app URL (.../exec) ที่ได้จาก Apps Script */
 var SHEET_TOKEN = 'AROMA2024'; /* ต้องตรงกับ TOKEN ใน Code.gs */
 /* ========================================= */
 
@@ -1185,7 +1188,7 @@ function totals(){
     stars: a.stars+b.stars+c.stars+p.stars+q.stars,
     done:  a.done+b.done+c.done+p.done+q.topicsDone,
     total: ESTER_MISSIONS.length + HYDRO_MISSIONS.length + EQUIL_MISSIONS.length
-         + SAPON_MISSIONS.length + QUEST_TOPICS.length,
+         + SAPON_MISSIONS.length + (TEST_MODE_ENABLED ? QUEST_TOPICS.length : 0),
     hints: a.hints+b.hints+c.hints+p.hints,
     tries: a.tries+b.tries+c.tries+p.tries,
     ms:    a.ms+b.ms+c.ms+p.ms
@@ -1195,7 +1198,7 @@ function totals(){
 function questTally(){
   var best=0, stars=0, runs=0, topicsDone=0, per={};
   QUEST_TOPICS.forEach(function(t){
-    var r = (S.quest && S.quest[t.id]) || { best:0, stars:0, runs:0 };
+    var r = (TEST_MODE_ENABLED && S.quest && S.quest[t.id]) || { best:0, stars:0, runs:0 };
     per[t.id] = r;
     best += r.best||0; stars += r.stars||0; runs += r.runs||0;
     if (r.runs) topicsDone++;
@@ -1389,6 +1392,7 @@ function paintHome(){
   paintHeader();
   var wrap = $('modeList'); wrap.innerHTML = '';
   MODES.forEach(function(m){
+    if (m.id==='quest' && !TEST_MODE_ENABLED) return;
     var lst = m.list(), bag = m.bag();
     var done = 0, stars = 0;
     lst.forEach(function(x){ if (bag[x.id] && bag[x.id].done){ done++; stars += bag[x.id].stars||0; } });
@@ -1421,6 +1425,7 @@ function paintHome(){
 }
 
 function openMode(id){
+  if (id==='quest' && !TEST_MODE_ENABLED) return;
   if (id==='ester') showMissionList('ester');
   else if (id==='hydro') showMissionList('hydro');
   else if (id==='equil') showMissionList('equil');
@@ -3009,6 +3014,7 @@ function prepTwo(it){
 var QZ = null;
 
 function openQuest(){
+  if (!TEST_MODE_ENABLED){ show('home'); paintHome(); return; }
   var h = '<div class="order"><div class="order-top"><span class="chip">ประเมิน</span>'
     + '<b>ภารกิจประเมินผล</b></div>'
     + '<p>แยกเป็น 3 เรื่อง ทำแยกกันได้อิสระ แต่ละเรื่องสุ่มข้อสอบ 10 ข้อ '
@@ -3046,6 +3052,7 @@ function countTopicPool(tid){
 }
 
 function openQuestTopic(tid){
+  if (!TEST_MODE_ENABLED){ show('home'); paintHome(); return; }
   var t = findTopic(tid);
   var r = (S.quest && S.quest[tid]) || {};
   $('play').innerHTML =
@@ -3064,6 +3071,7 @@ function openQuestTopic(tid){
 }
 
 function startQuest(tid){
+  if (!TEST_MODE_ENABLED){ show('home'); paintHome(); return; }
   QZ = { topic:tid, set:buildQuestSet(tid), i:0, score:0, t0:Date.now(), rows:[] };
   paintQuestItem();
 }
@@ -4482,8 +4490,8 @@ function paintTeacher(){
   sec('ไฮโดรลิซิส', HYDRO_MISSIONS, S.hydro);
   sec('สมดุล', EQUIL_MISSIONS, S.equil);
   sec('สะปอนนิฟิเคชัน', SAPON_MISSIONS, S.sapon);
-  rows += '<tr class="th"><td colspan="5">ภารกิจประเมินผล</td></tr>';
-  QUEST_TOPICS.forEach(function(t,i){
+  if (TEST_MODE_ENABLED) rows += '<tr class="th"><td colspan="5">ภารกิจประเมินผล</td></tr>';
+  (TEST_MODE_ENABLED ? QUEST_TOPICS : []).forEach(function(t,i){
     var r = (S.quest && S.quest[t.id]) || {};
     rows += '<tr><td>'+(i+1)+'</td><td>'+t.th+'</td><td>'+(r.runs?'✔':'-')+'</td>'
           + '<td>'+(r.best||0)+'</td><td>'+(r.runs||0)+' ครั้ง</td></tr>';
